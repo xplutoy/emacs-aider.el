@@ -36,49 +36,49 @@
   :group 'emacs-aider)
 
 (defcustom emacs-aider-chat-window-selected-p t
-  "whthere selected the chat window when start a new aider session."
+  "whether selected the chat window when start a new aider session."
   :type 'boolean
   :group 'emacs-aider)
+
+(defun emacs-aider--chat-buffer-p ()
+  "Whether current buffer is `aider-chat' buffer."
+  (string-match-p "^\\*emacs-aider.*\\*$" (buffer-name)))
 
 (defun emacs-aider--run (buffer command cmd-args)
   "Start a new aider session."
   (apply #'make-comint-in-buffer "emacs-aider" buffer command nil cmd-args))
 
 (defun emacs-aider--process-send-string (str)
-  (if (and (string-match-p "\n" str)
-           (not (string-match-p "^{aidermacs\n.*\naidermacs}$" str)))
-      (format "{aidermacs\n%s\naidermacs}" str)
-    str))
+  "Pre-process the `str' which send to `aider-chat' buffer."
+  (let* ((str-tag (if (string-match-p "\n" str)
+		      (format "{emacs-aider\n%s\nemacs-aider}" str)
+		    str))
+	 (str-trim (string-trim str-tag))
+	 (str-newline (concat str-trim "\n")))
+    (identity str-newline)))
 
-(defun emacs-aider--send (buffer string)
+(defun emacs-aider--send (buffer str)
   "Send command or contents to aider chat buffer."
   (let ((process (get-buffer-process buffer))
 	(inhibit-read-only t))
     (with-current-buffer buffer
       (when (process-live-p process)
-	(let ((process-str (emacs-aider--process-send-string string)))
+	(let ((process-str (emacs-aider--process-send-string str)))
 	  (goto-char (process-mark process))
 	  (insert process-str)
 	  (set-marker (process-mark process) (point))
 	  (comint-send-string process process-str))))))
 
-;; (defun test-1 (string)
-;;   (interactive)
-;;   (emacs-aider--send (emacs-aider--get-buffer-name) string))
-
-(test-1 "/ask 你好\n你叫什么名字？\n你爱吃菠菜吗？")
-
+(defun emacs-aider--get-buffer-name ()
+  "Build `emacs-aider' buffer name according to `project-root' or `default-directory'."
+  (format "*emacs-aider:%s*" (if-let* ((project (project-current)))
+				 (project-root project)
+			       default-directory)))
 (defun emacs-aider--get-final-args ()
   "Build the final args of `emacs-aider-command'."
   ;; TODO
   ;; (format "%s" emacs-aider-command-default-args))
   (string-split emacs-aider-command-default-args nil))
-
-(defun emacs-aider--get-buffer-name ()
-  "Build `emacs-aider' buffer name according to `project-root' or `default-directory'."
-  (format "*emacs-aider:%s*" (if-let* ((project (project-current)))
-				  (project-root project)
-			       default-directory)))
 
 ;;;###autoload
 (defun emacs-aider-run-dwim ()
@@ -97,14 +97,26 @@
 
     (with-current-buffer buffer
       (setq comint-process-echoes t)
+      (goto-char (point-max))
       ;; TODO
       )
     )
   )
 
+;;;###autoload
+(defalias #'emacs-aider-toggle-aider-chat #'emacs-aider-run-dwim)
 
 
-
+;;;###autoload
+(defun emacs-aider-query-region-or-defun (&optional capture)
+  (interactive
+   (list (cond ((region-active-p) (buffer-substring-no-properties (region-beginning)
+								  (region-end)))
+	       (t (thing-at-point 'defun)))))
+  (let ((query-text (if capture
+			(format "```\n%s\n```\n%s" capture (read-string "Aider Chat:"))
+		      (read-string "Aider Chat:"))))
+    (emacs-aider--send (emacs-aider--get-buffer-name) query-text)))
 
 (provide 'emacs-aider)
 ;;; emacs-aider.el ends here
