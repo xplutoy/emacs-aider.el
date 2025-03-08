@@ -14,6 +14,7 @@
 
 (require 'comint)
 (require 'json)
+(require 'project)
 
 (defgroup emacs-aider nil
   "Emacs integration for aider.chat"
@@ -24,26 +25,65 @@
   :type 'string
   :group 'emacs-aider)
 
-(defcustom emacs-aider-buffer-name "*aider*"
-  "Name of the buffer for the aider chat interface."
+(defcustom emacs-aider-command-default-args "--model deepseek"
+  "The command args for `emacs-aider-command'."
   :type 'string
   :group 'emacs-aider)
 
-(defun emacs-aider--start-process ()
-  "Start the aider process."
-  (let ((buffer (get-buffer-create emacs-aider-buffer-name)))
-    (unless (comint-check-proc buffer)
-      (apply 'make-comint-in-buffer "aider" buffer emacs-aider-command nil))
-    buffer))
+(defcustom emacs-aider-display-buffer-action nil
+  "The default display action of `emacs-aider' buffer."
+  :type 'list
+  :group 'emacs-aider)
+
+(defcustom emacs-aider-chat-window-selected-p t
+  "whthere selected the chat window when start a new aider session."
+  :type 'boolean
+  :group 'emacs-aider)
+
+(defun emacs-aider--run (buffer command cmd-args)
+  "Start a new aider session."
+  (apply #'make-comint-in-buffer "emacs-aider" buffer command nil cmd-args))
+
+(defun emacs-aider--seed ()
+  "Send command or contents to aider chat buffer."
+  ;; TODO
+
+  )
+
+(defun emacs-aider--get-final-args ()
+  "Build the final args of `emacs-aider-command'."
+  ;; TODO
+  ;; (format "%s" emacs-aider-command-default-args))
+  (string-split emacs-aider-command-default-args nil))
+
+(defun emacs-aider--get-buffer-name ()
+  "Build `emacs-aider' buffer name according to `project-root' or `default-directory'."
+  (format "*emacs-aider:%s*" (if-let* ((project (project-current)))
+				  (project-root project)
+			       default-directory)))
 
 ;;;###autoload
-(defun emacs-aider ()
-  "Start or switch to the aider chat interface."
+(defun emacs-aider-run-dwim ()
+  "Start a new aider session for current project or the `default-directory'."
   (interactive)
-  (let ((buffer (emacs-aider--start-process)))
-    (pop-to-buffer buffer)
-    (unless (eq major-mode 'comint-mode)
-      (comint-mode))))
+  (let* ((buffer-name (emacs-aider--get-buffer-name))
+	 (buffer (get-buffer-create buffer-name))
+	 (final-args (emacs-aider--get-final-args)))
+    (unless (process-live-p (get-buffer-process buffer))
+      (emacs-aider--run buffer emacs-aider-command final-args))
+    ;; restore default layout
+    (delete-other-windows)
+    (pop-to-buffer buffer emacs-aider-display-buffer-action t)
+    (when emacs-aider-chat-window-selected-p
+      (switch-to-buffer buffer))
+
+    (with-current-buffer buffer
+      ;; TODO
+      )
+    )
+  )
+
+
 
 
 
