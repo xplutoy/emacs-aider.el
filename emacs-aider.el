@@ -1,7 +1,11 @@
-;;; -*- lexical-binding: t -*-
+;;; emacs-aider.el --- Emacs integration for aider.chat -*- lexical-binding: t -*-
 
-;; Author:  xplutoyz
+;; Copyright (C) 2025 xplutoyz
+
+;; Author: xplutoyz
 ;; Created: 2025-03-08 13:10:34
+;; Version: 0.1
+;; Package-Requires: ((emacs "27.1"))
 
 ;;; Commentary:
 ;; Emacs integration for aider.chat - an AI pair programming assistant
