@@ -44,11 +44,29 @@
   "Start a new aider session."
   (apply #'make-comint-in-buffer "emacs-aider" buffer command nil cmd-args))
 
-(defun emacs-aider--seed ()
-  "Send command or contents to aider chat buffer."
-  ;; TODO
+(defun emacs-aider--process-send-string (str)
+  (if (and (string-match-p "\n" str)
+           (not (string-match-p "^{aidermacs\n.*\naidermacs}$" str)))
+      (format "{aidermacs\n%s\naidermacs}" str)
+    str))
 
-  )
+(defun emacs-aider--send (buffer string)
+  "Send command or contents to aider chat buffer."
+  (let ((process (get-buffer-process buffer))
+	(inhibit-read-only t))
+    (with-current-buffer buffer
+      (when (process-live-p process)
+	(let ((process-str (emacs-aider--process-send-string string)))
+	  (goto-char (process-mark process))
+	  (insert process-str)
+	  (set-marker (process-mark process) (point))
+	  (comint-send-string process process-str))))))
+
+;; (defun test-1 (string)
+;;   (interactive)
+;;   (emacs-aider--send (emacs-aider--get-buffer-name) string))
+
+(test-1 "/ask 你好\n你叫什么名字？\n你爱吃菠菜吗？")
 
 (defun emacs-aider--get-final-args ()
   "Build the final args of `emacs-aider-command'."
@@ -78,6 +96,7 @@
       (switch-to-buffer buffer))
 
     (with-current-buffer buffer
+      (setq comint-process-echoes t)
       ;; TODO
       )
     )
