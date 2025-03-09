@@ -13,6 +13,7 @@
 ;;; Code:
 
 (require 'comint)
+(require 'dired)
 (require 'project)
 
 (defgroup emacs-aider nil
