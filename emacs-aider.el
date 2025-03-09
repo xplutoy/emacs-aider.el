@@ -189,10 +189,11 @@ This should be a string that can be passed to `kbd'."
                   (buffer-substring-no-properties (region-beginning) (region-end)))
                  (t
                   (thing-at-point 'defun)))))
-  (let ((query-text
+  (let ((user-input (read-string "Aider Chat: "))
+        (query-text
          (if capture
-             (format "\n```\n%s\n```\n%s" capture (read-string "Aider Chat: "))
-           (read-string "Aider Chat: "))))
+             (format "\n```\n%s\n```\n%s" capture user-input)
+           user-input)))
     (when (emacs-aider-run-dwim)
       (emacs-aider--send (emacs-aider--get-buffer-name) query-text))))
 
