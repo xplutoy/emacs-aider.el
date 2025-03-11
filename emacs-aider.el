@@ -75,7 +75,7 @@ This should be a string that can be passed to `kbd'."
   (let ((process (get-buffer-process buffer))
         (inhibit-read-only t))
     (with-current-buffer buffer
-      (when (process-live-p process)
+      (when (comint-check-proc buffer)
         (let ((process-str (emacs-aider--process-send-string str)))
           (goto-char (process-mark process))
           (insert process-str)
@@ -85,7 +85,7 @@ This should be a string that can be passed to `kbd'."
 (defun emacs-aider--root-dir ()
   "Current `project-root' or `default-directory'."
   (if-let* ((prj (project-current)))
-    (project-root prj)
+      (project-root prj)
     default-directory))
 
 (defun emacs-aider--get-buffer-name ()
@@ -176,14 +176,13 @@ This should be a string that can be passed to `kbd'."
   "Start a new aider session for current project or the `default-directory'."
   (interactive)
   (if (emacs-aider--allow-to-run-p)
-      (let* ((buffer-name (emacs-aider--get-buffer-name))
-             (buffer (get-buffer-create buffer-name)))
-        (unless (process-live-p (get-buffer-process buffer))
-          (emacs-aider--run buffer emacs-aider-command emacs-aider-command-default-args))
+      (let* ((buffer-name (emacs-aider--get-buffer-name)))
+        (unless (comint-check-proc buffer-name)
+          (emacs-aider--run buffer-name emacs-aider-command emacs-aider-command-default-args))
         ;; restore default layout
         (delete-other-windows)
-        (display-buffer buffer emacs-aider-display-buffer-action t)
-        (with-current-buffer buffer
+        (display-buffer buffer-name emacs-aider-display-buffer-action t)
+        (with-current-buffer buffer-name
           (goto-char (point-max))
           (setq comint-process-echoes t)))
     (message "It is not allowed to run here")
@@ -196,12 +195,12 @@ This should be a string that can be passed to `kbd'."
                  ((region-active-p)
                   (buffer-substring-no-properties (region-beginning) (region-end)))
                  (t
-                  (thing-at-point 'defun)))))
+                  (thing-at-point 'defun t)))))
   (let* ((user-input (completing-read "Query Prompt: " emacs-aider-query-prompts))
-         (query-text
-          (if capture
-              (format "\n```\n%s\n```\n%s" capture user-input)
-            user-input)))
+         (query-text (cond
+		      (current-prefix-arg user-input)
+		      (capture (format "\n```\n%s\n```\n%s" capture user-input))
+		      (t user-input))))
     (when (emacs-aider-run-dwim)
       (emacs-aider--send (emacs-aider--get-buffer-name) query-text))))
 
