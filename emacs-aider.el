@@ -41,6 +41,13 @@ This should be a string that can be passed to `kbd'."
   :type 'string
   :group 'emacs-aider)
 
+(defcustom emacs-aider-query-prompts '("Please explain the code and summarize the key functions or algorithms."
+				       "Please complete the function based on the comments or function name."
+				       "Please review the code and provide optimization suggestions.")
+  "Predefined query prompts for `emacs-aider-query-dwim'."
+  :type 'list
+  :group 'emacs-aider)
+
 (defun emacs-aider--chat-buffer-p ()
   "Whether current buffer is `aider-chat' buffer."
   (string-match-p "^\\*emacs-aider.*\\*$" (buffer-name)))
@@ -190,11 +197,11 @@ This should be a string that can be passed to `kbd'."
                   (buffer-substring-no-properties (region-beginning) (region-end)))
                  (t
                   (thing-at-point 'defun)))))
-  (let ((user-input (read-string "Aider Chat: "))
-        (query-text
-         (if capture
-             (format "\n```\n%s\n```\n%s" capture user-input)
-           user-input)))
+  (let* ((user-input (completing-read "Query Prompt: " emacs-aider-query-prompts))
+         (query-text
+          (if capture
+              (format "\n```\n%s\n```\n%s" capture user-input)
+            user-input)))
     (when (emacs-aider-run-dwim)
       (emacs-aider--send (emacs-aider--get-buffer-name) query-text))))
 
